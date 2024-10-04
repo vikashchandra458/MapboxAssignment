@@ -47,6 +47,7 @@ const Dashboard = () => {
   const clearCoordinates = () => {
     try {
       setCurrentCoordinates([]);
+      setSelectedCoordinates([]);
       setArea(null);
       setEditable(false);
     } catch (error) {
@@ -67,6 +68,7 @@ const Dashboard = () => {
     }
   };
 
+  // Calculate the area of the selected polygon
   const calculateArea = coords => {
     try {
       const polygon = turf.polygon([coords]); // Create a polygon with Turf.js
