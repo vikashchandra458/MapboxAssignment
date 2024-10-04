@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text} from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import normaliseText from '../../Components/normaliseText';
 
@@ -7,8 +7,6 @@ const MapViewComponent = ({
   currentCoordinates,
   setCurrentCoordinates,
   savedPolygons,
-  markers,
-  setMarkers,
   setArea,
   editable,
   setSelectedCoordinates,
@@ -22,24 +20,16 @@ const MapViewComponent = ({
 
     // Update state with new coordinates and markers
     setCurrentCoordinates(updatedCoordinates);
-    setMarkers(prevMarkers => [
-      ...prevMarkers,
-      {coordinates: newPoint, area: null},
-    ]);
 
     // Calculate the area if enough points are available
     if (updatedCoordinates.length >= 3) {
       const closedCoordinates = [...updatedCoordinates, updatedCoordinates[0]]; // Ensure the polygon is closed
       const calculatedArea = calculateArea(closedCoordinates);
       setArea(calculatedArea);
-
-      // Update the last marker with the calculated area
-      const updatedMarkers = [...markers];
-      updatedMarkers[updatedMarkers.length - 1].area = calculatedArea;
-      setMarkers(updatedMarkers);
     }
   };
 
+  // Calculate the center of the polygon
   const calculateCentroid = coords => {
     const x = coords.reduce((sum, coord) => sum + coord[0], 0) / coords.length;
     const y = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length;
@@ -48,7 +38,10 @@ const MapViewComponent = ({
 
   return (
     <MapboxGL.MapView style={{flex: 1}} onPress={handleMapPress}>
-      <MapboxGL.Camera zoomLevel={10} centerCoordinate={[-73.9654, 40.7829]} />
+      <MapboxGL.Camera
+        zoomLevel={10}
+        centerCoordinate={[78.4110981, 17.4345181]}
+      />
 
       {/* Render current polygon if it exists */}
       {currentCoordinates.length >= 3 && (
@@ -102,8 +95,14 @@ const MapViewComponent = ({
               id={`view-button-${index}`}
               onSelected={() => setSelectedCoordinates(polygon)}
               coordinate={centroid}>
-              <View style={styles.viewButton}>
-                <Text style={styles.viewButtonText}>📍</Text>
+              <View>
+                <Text
+                  style={{
+                    fontSize: normaliseText(20),
+                    color: 'white',
+                  }}>
+                  📍
+                </Text>
               </View>
             </MapboxGL.PointAnnotation>
           </React.Fragment>
@@ -112,14 +111,14 @@ const MapViewComponent = ({
 
       {/* Render markers with details on press */}
       {editable &&
-        markers.map((marker, index) => (
+        currentCoordinates?.map((marker, index) => (
           <MapboxGL.PointAnnotation
             key={`marker-${index}`}
             id={`marker-${index}`}
-            coordinate={marker.coordinates}>
+            coordinate={marker}>
             <View
               style={{
-                zIndex: -1,
+                zIndex: -10,
               }}>
               <Text style={{fontSize: 20}}>📍</Text>
             </View>
@@ -128,16 +127,5 @@ const MapViewComponent = ({
     </MapboxGL.MapView>
   );
 };
-
-const styles = StyleSheet.create({
-  viewButtonContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  viewButtonText: {
-    fontSize: normaliseText(20),
-    color: 'white',
-  },
-});
 
 export default MapViewComponent;

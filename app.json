@@ -1,4 +1,9 @@
 {
   "name": "MapboxAssignment",
-  "displayName": "MapboxAssignment"
+  "displayName": "MapboxAssignment",
+  "extra": {
+    "eas": {
+      "projectId": "76b47f5f-7988-4045-98a9-554d89dce123"
+    }
+  }
 }

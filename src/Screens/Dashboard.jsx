@@ -1,23 +1,23 @@
 import React, {useEffect, useState} from 'react';
 import {View} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as turf from '@turf/turf';
 import MapboxGL from '@rnmapbox/maps';
 import {MAPBOX_DOWNLOADS_TOKEN} from '@env';
-import PolygonControls from './DashboardComponents/PolygonControls';
-import MapViewComponent from './DashboardComponents/MapViewComponent';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import MessageModal from '../Components/MessageModal';
 import AreaDisplay from './DashboardComponents/AreaDisplay';
-import * as turf from '@turf/turf';
+import MapViewComponent from './DashboardComponents/MapViewComponent';
+import PolygonControls from './DashboardComponents/PolygonControls';
 
 MapboxGL.setAccessToken(MAPBOX_DOWNLOADS_TOKEN);
 
 const Dashboard = () => {
   const [savedPolygons, setSavedPolygons] = useState([]);
   const [currentCoordinates, setCurrentCoordinates] = useState([]);
-  const [area, setArea] = useState(null);
-  const [markers, setMarkers] = useState([]);
-  const [editable, setEditable] = useState(false);
   const [selectedCoordinates, setSelectedCoordinates] = useState([]);
+  const [area, setArea] = useState(null);
+  const [editable, setEditable] = useState(false);
 
   // Load saved polygons from AsyncStorage
   const loadSavedPolygons = async () => {
@@ -37,10 +37,7 @@ const Dashboard = () => {
       if (polygons?.length == 25) return; // Limit polygons to 25
       await AsyncStorage.setItem('savedPolygons', JSON.stringify(polygons));
       setSavedPolygons(polygons);
-      setCurrentCoordinates([]);
-      setMarkers([]);
-      setEditable(false);
-      setArea(null);
+      clearCoordinates();
     } catch (error) {
       console.error('Error saving polygons to storage:', error);
     }
@@ -51,7 +48,6 @@ const Dashboard = () => {
     try {
       setCurrentCoordinates([]);
       setArea(null);
-      setMarkers([]);
       setEditable(false);
     } catch (error) {
       console.error('Error clearing coordinates:', error);
@@ -65,8 +61,7 @@ const Dashboard = () => {
         current => current !== selectedCoordinates,
       );
       savePolygons(newPolygons);
-      setSelectedCoordinates([]);
-      setCurrentCoordinates([]);
+      clearCoordinates();
     } catch (error) {
       console.error('Error deleting polygon:', error);
     }
@@ -107,8 +102,6 @@ const Dashboard = () => {
         currentCoordinates={currentCoordinates}
         setCurrentCoordinates={setCurrentCoordinates}
         savedPolygons={savedPolygons}
-        markers={markers}
-        setMarkers={setMarkers}
         setArea={setArea}
         editable={editable}
         setSelectedCoordinates={setSelectedCoordinates}
