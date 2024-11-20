@@ -20,11 +20,11 @@ class LPF {
   }
 }
 
-const Compass = ({rotation, heading, setHeading, independent}) => {
+const Compass = ({rotation, heading, setHeading, independent, setAngle}) => {
   const [internalHeading, setInternalHeading] = useState(0);
   const [rotateAnim] = useState(new Animated.Value(0)); // Start with 0
   const {width, height, landscape} = useAvailableDimensions();
-
+  const [currentAngle, setCurrentAngle] = useState(0);
   // Define the degree update rate and directions based on custom ranges
   const directionRanges = [
     {range: [330, 360], direction: 'North'},
@@ -34,7 +34,11 @@ const Compass = ({rotation, heading, setHeading, independent}) => {
     {range: [180, 269], direction: 'South West'},
     {range: [270, 329], direction: 'North West'},
   ];
-
+  // useEffect(() => {
+  //   setTimeout(() => {
+  //     setAngle(currentAngle);
+  //   }, 1000);
+  // }, [currentAngle]);
   // Determine whether we should use internal state or props
   const currentHeading = heading !== undefined ? heading : internalHeading;
   const currentSetHeading = setHeading || setInternalHeading;
@@ -54,10 +58,11 @@ const Compass = ({rotation, heading, setHeading, independent}) => {
     // Subscribe to magnetometer updates
     const magnetometerSubscription = magnetometer.subscribe(({x, y}) => {
       // Angle calculation with LPF smoothing and handling negative angles
-      let angle = Math.atan2(x, y) * (180 / Math.PI) ;
+      let angle = Math.atan2(x, y) * (180 / Math.PI);
       // angle = Math.abs(angle);
       angle = (angle + 360) % 360;
       angle = 360 - angle;
+      setCurrentAngle(angle);
       // console.log(angle);
 
       // if (angle < 0) {
@@ -144,7 +149,16 @@ const Compass = ({rotation, heading, setHeading, independent}) => {
                   marginBottom: 5,
                   resizeMode: 'contain',
                 },
-            {transform: [{rotate: rotationInterpolated}]}, // Apply rotation animation here
+            {
+              transform: [
+                {
+                  rotateZ: currentAngle
+                    ? `${360 - currentAngle} deg`
+                    : '45 deg',
+                },
+              ],
+            },
+            // {transform: [{rotate: rotationInterpolated}]}, // Apply rotation animation here
           ]}
         />
         <Text style={styles.headingText}>

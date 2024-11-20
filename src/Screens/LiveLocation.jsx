@@ -4,8 +4,6 @@ import {
   StyleSheet,
   PermissionsAndroid,
   Platform,
-  Animated,
-  Image,
   Text,
   TouchableOpacity,
   ToastAndroid,
@@ -14,18 +12,25 @@ import {
 import MapboxGL from '@rnmapbox/maps';
 import Geolocation from 'react-native-geolocation-service';
 import {MAPBOX_DOWNLOADS_TOKEN} from '@env';
-import Compass from './Compass';
-
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 MapboxGL.setAccessToken(MAPBOX_DOWNLOADS_TOKEN);
 
+import Compass from './Compass';
 const LiveLocation = ({route}) => {
   const [location, setLocation] = useState(
     route?.params?.propslocation || null,
   );
+  const [centerlocation, setCenterLocation] = useState(
+    route?.params?.propslocation || null,
+  );
   const [watchId, setWatchId] = useState([]);
   const [error, setError] = useState(null);
+  const [mapStyle, setMapStyle] = useState(MapboxGL.StyleURL.Street);
+  const [zoomLevel, setZoomLevel] = useState(18); // Track zoom level
+  const [accuracyZoomLevel, setaccuracyZoomLevel] = useState(18);
   const desired_accuracy = route?.params?.desiredAccuracy || 20;
-  const [showImage, setShowImage] = useState(true);
+  const [animationMode, setAnimationMode] = useState('none');
+  const [currentAngle, setCurrentAngle] = useState(0);
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
@@ -64,7 +69,6 @@ const LiveLocation = ({route}) => {
       position => {
         const {latitude, longitude, accuracy, altitude, heading, speed} =
           position.coords;
-
         setLocation(prevLocation => ({
           latitude,
           longitude,
@@ -77,7 +81,9 @@ const LiveLocation = ({route}) => {
             : 1,
           updatedCount: prevLocation?.updatedCount || 0,
         }));
-
+        setZoomLevel(accuracyZoomLevel);
+        setAnimationMode('');
+        // setCenterLocation([]);
         console.log('Auto current location:', position.coords);
 
         if (Number(accuracy?.toFixed(2)) < desired_accuracy) {
@@ -91,9 +97,9 @@ const LiveLocation = ({route}) => {
       },
       {
         enableHighAccuracy: true,
-        distanceFilter: 1,
-        interval: 2000,
-        fastestInterval: 1000,
+        distanceFilter: 0,
+        interval: 1,
+        fastestInterval: 1,
       },
     );
     setWatchId(prevWatchIds => [...prevWatchIds, id]);
@@ -111,10 +117,6 @@ const LiveLocation = ({route}) => {
       });
       Geolocation.stopObserving();
       setWatchId([]); // Clear all watch IDs
-      // Alert.alert(
-      //   'Tracking Stopped',
-      //   'All location watchers have been stopped.',
-      // );
     } else {
       if (watchId?.length > 0) {
         const lastWatchId = watchId[watchId.length - 1];
@@ -138,11 +140,20 @@ const LiveLocation = ({route}) => {
       }
     }
   };
+  const toggleMapStyle = () => {
+    setMapStyle(prevStyle =>
+      prevStyle === MapboxGL.StyleURL.Street
+        ? MapboxGL.StyleURL.Satellite
+        : MapboxGL.StyleURL.Street,
+    );
+  };
 
   const getCurrentLocation = async () => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) return;
-
+    setCenterLocation(location)
+    setAnimationMode('flyTo');
+    setZoomLevel(18);
     Geolocation.getCurrentPosition(
       position => {
         const {latitude, longitude, accuracy, altitude, heading, speed} =
@@ -160,13 +171,25 @@ const LiveLocation = ({route}) => {
             ? prevLocation.updatedCount + 1
             : 1,
         }));
+        setCenterLocation({
+          latitude,
+          longitude,
+          accuracy,
+          altitude,
+          heading,
+          speed,
+          autoUpdatedCount: location?.autoUpdatedCount || 0,
+          updatedCount: location?.updatedCount ? location.updatedCount + 1 : 1,
+        });
+        // setAnimationMode('flyTo');
+        // setZoomLevel(18);
 
         console.log('Current location:', position.coords);
 
-        if (Number(accuracy?.toFixed(2)) < desired_accuracy) {
-          stopTrackingLocation('stopAll');
-          console.log('Desired accuracy reached:', accuracy?.toFixed(2));
-        }
+        // if (Number(accuracy?.toFixed(2)) < desired_accuracy) {
+        //   stopTrackingLocation('stopAll');
+        //   console.log('Desired accuracy reached:', accuracy?.toFixed(2));
+        // }
       },
       error => {
         setError(error.message);
@@ -176,60 +199,132 @@ const LiveLocation = ({route}) => {
     );
   };
 
+  const onRegionDidChange = async camera => {
+    // console.log(camera?.properties?.zoom);
+    // const cameraState = await MapboxGL.Camera.getCamera();
+    setaccuracyZoomLevel(camera?.properties?.zoom);
+  };
+
   useEffect(() => {
     getCurrentLocation();
     startTrackingLocation();
-
-    // return () => {
-    //   stopTrackingLocation('stopAll');
-    // };
   }, []);
-  useEffect(() => {
-    setShowImage(false);
-    setTimeout(() => {
-      setShowImage(true);
-    }, 100);
-  }, [location]);
+  const calculateScaledCircleRadius = (accuracy, zoom) => {
+    // Ensure accuracy is positive
+    if (accuracy <= 0) {
+      return 0; // Return 0 or some other default value if accuracy is invalid
+    }
+
+    // Calculate the zoom scale factor based on the zoom level (22 being the highest zoom level)
+    const zoomScaleFactor = Math.pow(2, 18 - zoom);
+
+    // Calculate the scaled radius based on accuracy and zoom
+    const result = accuracy / zoomScaleFactor;
+
+    return result;
+  };
 
   return (
     <View style={styles.container}>
-      <MapboxGL.MapView style={styles.map}>
-        {location?.longitude && (
-          <MapboxGL.Camera
-            centerCoordinate={[location.longitude, location.latitude]}
-            zoomLevel={16}
-            animationMode="flyTo"
-            animationDuration={500}
-          />
-        )}
-        {showImage && (
-          <MapboxGL.PointAnnotation
-            id="userLocation"
-            coordinate={[location?.longitude, location?.latitude]}>
-            <Image
-              source={require('./assets/arrow.png')}
-              style={styles.arrow}
+      <MapboxGL.MapView
+        style={styles.map}
+        styleURL={mapStyle}
+        onCameraChanged={onRegionDidChange}>
+        <MapboxGL.Camera
+          centerCoordinate={[
+            centerlocation?.longitude || 0,
+            centerlocation?.latitude || 0,
+          ]}
+          zoomLevel={zoomLevel}
+          maxZoomLevel={20}
+          animationMode={animationMode}
+          animationDuration={500}
+        />
+        {/* Accuracy Ring */}
+        {location?.accuracy && (
+          <MapboxGL.ShapeSource
+            id="accuracyCircle"
+            shape={{
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [location.longitude, location.latitude],
+              },
+            }}>
+            <MapboxGL.CircleLayer
+              id="circle"
+              style={{
+                circleRadius: calculateScaledCircleRadius(
+                  location.accuracy,
+                  accuracyZoomLevel,
+                ),
+                circleColor: 'rgba(0, 122, 255, 0.3)',
+                circleStrokeWidth: 1,
+                circleStrokeColor: 'rgba(0, 122, 255, 0.8)',
+              }}
             />
-          </MapboxGL.PointAnnotation>
+          </MapboxGL.ShapeSource>
+        )}
+        {/* User Location Marker */}
+        {location?.longitude && (
+          <MapboxGL.ShapeSource
+            id="userLocationSource"
+            shape={{
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [location.longitude, location.latitude],
+              },
+            }}>
+            <MapboxGL.CircleLayer
+              id="userCircle"
+              style={{
+                circleRadius: 5,
+                circleColor: 'rgba(0, 122, 255, 0.8)',
+                circleStrokeWidth: 2,
+                circleStrokeColor: 'white',
+              }}
+            />
+            {/* <MapboxGL.SymbolLayer
+              id="userArrow"
+              style={{
+                iconImage: 'marker-15', // Use a valid Mapbox icon like 'marker-15'
+                iconSize: 3,
+                iconRotate: currentAngle,
+                iconAnchor: 'center',
+                iconColor: 'red',
+              }}
+            /> */}
+          </MapboxGL.ShapeSource>
         )}
       </MapboxGL.MapView>
 
-      <Compass independent={true} />
+      <Compass independent={true} setAngle={setCurrentAngle} />
 
-      <TouchableOpacity style={styles.button} onPress={getCurrentLocation}>
-        <Image
-          source={require('./assets/current.png')}
-          style={{width: 46, height: 46, borderRadius: 100}}
+      {/* Toggle Button for Satellite/Street View */}
+      <TouchableOpacity style={styles.toggleButton} onPress={toggleMapStyle}>
+        <Icon
+          name={
+            mapStyle === MapboxGL.StyleURL.Street ? 'satellite-uplink' : 'map'
+          }
+          size={30}
+          color="white"
         />
       </TouchableOpacity>
 
+      {/* Current Location Button */}
+      <TouchableOpacity style={styles.button} onPress={getCurrentLocation}>
+        <Icon name="crosshairs-gps" size={30} color="white" />
+      </TouchableOpacity>
+
+      {/* Location Information */}
       {location && (
         <View style={styles.locationInfo}>
           <Text style={styles.locationText}>
-            Latitude: {location.latitude.toFixed(2)}
+            Latitude: {location.latitude.toFixed(6)}
           </Text>
           <Text style={styles.locationText}>
-            Longitude: {location.longitude.toFixed(2)}
+            Longitude: {location.longitude.toFixed(6)}
           </Text>
           <Text style={styles.locationText}>
             Accuracy: {location.accuracy.toFixed(2)} m
@@ -266,14 +361,29 @@ const LiveLocation = ({route}) => {
 const styles = StyleSheet.create({
   container: {flex: 1},
   map: {flex: 1},
-  arrow: {width: 50, height: 50, resizeMode: 'contain'},
-  button: {position: 'absolute', bottom: 50, right: 10},
+  button: {
+    position: 'absolute',
+    bottom: 50,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 25,
+    padding: 10,
+  },
+  toggleButton: {
+    position: 'absolute',
+    bottom: 110,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 25,
+    padding: 10,
+  },
   locationInfo: {
     position: 'absolute',
     top: 10,
     right: 10,
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 10,
+    borderRadius: 8,
   },
   locationText: {color: '#fff', fontSize: 14},
   error: {position: 'absolute', bottom: 100, left: 10},
