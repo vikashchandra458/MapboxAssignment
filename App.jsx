@@ -37,7 +37,7 @@ export default function App() {
       ) : (
         // After the splash screen, show the navigation container with screens
         <NavigationContainer>
-          <Stack.Navigator initialRouteName="Dashboard">
+          <Stack.Navigator initialRouteName="Dashboard" screenOptions={{headerShown: false}}>
             <Stack.Screen name="Dashboard" component={Dashboard} />
             <Stack.Screen name="PolygonDraw" component={PolygonDraw} />
             <Stack.Screen name="LiveLocation" component={LiveLocation} />

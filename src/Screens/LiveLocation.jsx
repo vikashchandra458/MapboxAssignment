@@ -31,6 +31,8 @@ const LiveLocation = ({route}) => {
   const desired_accuracy = route?.params?.desiredAccuracy || 20;
   const [animationMode, setAnimationMode] = useState('none');
   const [currentAngle, setCurrentAngle] = useState(0);
+  const [isCompassOn, setIsCompassOn] = useState(true); // Track compass state
+  const [showDetails, setShowDetails] = useState(true); // Track details visibility
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
@@ -61,7 +63,7 @@ const LiveLocation = ({route}) => {
     if (!hasPermission) return;
 
     if (watchId.length > 0) {
-      console.warn('Stopping existing watchers before starting a new one.');
+      console.log('Stopping existing watchers before starting a new one.');
       stopTrackingLocation('stopAll');
     }
 
@@ -151,7 +153,7 @@ const LiveLocation = ({route}) => {
   const getCurrentLocation = async () => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) return;
-    setCenterLocation(location)
+    setCenterLocation(location);
     setAnimationMode('flyTo');
     setZoomLevel(18);
     Geolocation.getCurrentPosition(
@@ -298,8 +300,58 @@ const LiveLocation = ({route}) => {
           </MapboxGL.ShapeSource>
         )}
       </MapboxGL.MapView>
+      {isCompassOn && <Compass independent={true} setAngle={setCurrentAngle} />}
+      <View style={styles.detailsContainer}>
+        {/* Compass Toggle Button */}
+        <TouchableOpacity
+          style={[styles.toggleButton2, {marginTop: 25}]}
+          onPress={() => setIsCompassOn(!isCompassOn)}>
+          <Icon
+            name={isCompassOn ? 'compass' : 'compass-off'}
+            size={25}
+            color="white"
+          />
+        </TouchableOpacity>
 
-      <Compass independent={true} setAngle={setCurrentAngle} />
+        {/* Details Show/Hide Button */}
+        <TouchableOpacity
+          style={styles.toggleButton2}
+          onPress={() => {
+            setShowDetails(!showDetails);
+          }}>
+          <Icon
+            name={showDetails ? 'information' : 'information-off'}
+            size={25}
+            color="white"
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          activeOpacity={zoomLevel == 20 ? 0.5 : 1} 
+          style={styles.toggleButton2}
+          disabled={zoomLevel == 20} 
+          onPress={() => {
+            if (zoomLevel < 20) {
+              const newZoomLevel = zoomLevel + 1; // Increase zoom level
+              setZoomLevel(newZoomLevel); 
+              setaccuracyZoomLevel(newZoomLevel); 
+            }
+          }}>
+          <Icon name="plus-circle" size={25} color="white" />
+        </TouchableOpacity>
+
+        {/* Zoom Out Button */}
+        <TouchableOpacity
+          style={styles.toggleButton2}
+          onPress={() => {
+            const newZoomLevel = zoomLevel + 1; 
+              setZoomLevel(newZoomLevel);
+              setaccuracyZoomLevel(newZoomLevel);
+              setaccuracyZoomLevel(newZoomLevel);
+          }}>
+          <Icon name="minus-circle" size={25} color="white" />
+        </TouchableOpacity>
+      </View>
 
       {/* Toggle Button for Satellite/Street View */}
       <TouchableOpacity style={styles.toggleButton} onPress={toggleMapStyle}>
@@ -307,18 +359,18 @@ const LiveLocation = ({route}) => {
           name={
             mapStyle === MapboxGL.StyleURL.Street ? 'satellite-uplink' : 'map'
           }
-          size={30}
+          size={25}
           color="white"
         />
       </TouchableOpacity>
 
       {/* Current Location Button */}
       <TouchableOpacity style={styles.button} onPress={getCurrentLocation}>
-        <Icon name="crosshairs-gps" size={30} color="white" />
+        <Icon name="crosshairs-gps" size={25} color="white" />
       </TouchableOpacity>
 
       {/* Location Information */}
-      {location && (
+      {location && showDetails && (
         <View style={styles.locationInfo}>
           <Text style={styles.locationText}>
             Latitude: {location.latitude.toFixed(6)}
@@ -363,7 +415,7 @@ const styles = StyleSheet.create({
   map: {flex: 1},
   button: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 20,
     right: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 25,
@@ -371,11 +423,22 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     position: 'absolute',
-    bottom: 110,
+    bottom: 70,
     right: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 25,
     padding: 10,
+  },
+  detailsContainer: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+  },
+  toggleButton2: {
+    marginTop: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 25,
+    padding: 5,
   },
   locationInfo: {
     position: 'absolute',
