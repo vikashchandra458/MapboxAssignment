@@ -1,134 +1,198 @@
-import React, {useEffect, useState} from 'react';
-import {View} from 'react-native';
-import * as turf from '@turf/turf';
-import MapboxGL from '@rnmapbox/maps';
-import {MAPBOX_DOWNLOADS_TOKEN} from '@env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import MessageModal from '../Components/MessageModal';
-import AreaDisplay from './DashboardComponents/AreaDisplay';
-import MapViewComponent from './DashboardComponents/MapViewComponent';
-import PolygonControls from './DashboardComponents/PolygonControls';
-
-MapboxGL.setAccessToken(MAPBOX_DOWNLOADS_TOKEN);
+import React, {useState} from 'react';
+import {
+  View,
+  Button,
+  StyleSheet,
+  FlatList,
+  PermissionsAndroid,
+  Alert,
+  Platform,
+  Modal,
+  Text,
+  TextInput,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import Geolocation from 'react-native-geolocation-service';
 
 const Dashboard = () => {
-  const [savedPolygons, setSavedPolygons] = useState([]);
-  const [currentCoordinates, setCurrentCoordinates] = useState([]);
-  const [selectedCoordinates, setSelectedCoordinates] = useState([]);
-  const [area, setArea] = useState(null);
-  const [editable, setEditable] = useState(false);
+  const navigation = useNavigation();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [input, setInput] = useState('');
+  const [location, setLocation] = useState(null);
 
-  // Load saved polygons from AsyncStorage
-  const loadSavedPolygons = async () => {
-    try {
-      const storedPolygons = await AsyncStorage.getItem('savedPolygons');
-      if (storedPolygons) {
-        setSavedPolygons(JSON.parse(storedPolygons));
-      }
-    } catch (error) {
-      console.error('Error loading polygons from storage:', error);
-    }
-  };
+  const buttons = [
+    {name: 'Polygon Draw', screen: 'PolygonDraw'},
+    {name: 'Live Location', screen: 'LiveLocation'},
+    {name: 'Compass', screen: 'Compass'},
+    {name: 'Compass Heading', screen: 'CompassComponent'},
+  ];
 
-  // Save polygons to AsyncStorage
-  const savePolygons = async polygons => {
-    try {
-      if (polygons?.length == 25) return; // Limit polygons to 25
-      await AsyncStorage.setItem('savedPolygons', JSON.stringify(polygons));
-      setSavedPolygons(polygons);
-      clearCoordinates();
-    } catch (error) {
-      console.error('Error saving polygons to storage:', error);
-    }
-  };
+  // Log button data for debugging
+  console.log('Buttons array:', buttons);
 
-  // Clear the current coordinates and reset relevant states
-  const clearCoordinates = () => {
-    try {
-      setCurrentCoordinates([]);
-      setSelectedCoordinates([]);
-      setArea(null);
-      setEditable(false);
-    } catch (error) {
-      console.error('Error clearing coordinates:', error);
-    }
-  };
+  // Render each button with FlatList
+  const renderButton = ({item}) => (
+    <View style={styles.buttonWrapper}>
+      <Button
+        title={item.name}
+        onPress={() => {
+          if (item.name == 'Live Location') {
+            setModalVisible(true);
+            getCurrentLocation();
+          } else {
+            navigation.navigate(item.screen);
+          }
+        }}
+      />
+    </View>
+  );
 
-  // Delete the selected polygon
-  const handleDeletePolygon = () => {
-    try {
-      const newPolygons = savedPolygons.filter(
-        current => current !== selectedCoordinates,
+  // Request location permission for Android
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       );
-      savePolygons(newPolygons);
-      clearCoordinates();
-    } catch (error) {
-      console.error('Error deleting polygon:', error);
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        return true;
+      } else {
+        Alert.alert(
+          'Permission Denied',
+          'Location permission is required to use this feature.',
+          [
+            {text: 'Cancel', style: 'cancel'},
+            {
+              text: 'Open Settings',
+              onPress: () => PermissionsAndroid.openSettings(),
+            },
+          ],
+        );
+        return false;
+      }
     }
+    return true; // iOS permission handled via Info.plist
   };
 
-  // Calculate the area of the selected polygon
-  const calculateArea = coords => {
-    try {
-      const polygon = turf.polygon([coords]); // Create a polygon with Turf.js
-      const areaInSquareMeters = turf.area(polygon); // Calculate area in square meters
-      const areaInAcres = areaInSquareMeters / 4046.86; // Convert to acres
-      return areaInAcres;
-    } catch (error) {
-      console.error('Error calculating area:', error);
-      return null;
-    }
+  // Get current location
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) return;
+
+    Geolocation.getCurrentPosition(
+      position => {
+        const {latitude, longitude, accuracy, altitude, heading, speed} =
+          position.coords;
+        setLocation(prevLocation => ({
+          latitude,
+          longitude,
+          accuracy,
+          altitude,
+          heading,
+          speed,
+          autoUpdatedCount: 0,
+          updatedCount: 0,
+        }));
+        setModalVisible(true);
+      },
+      error => {
+        console.log('Error getting current location:', error.message);
+        Alert.alert('Error', 'Failed to get current location.');
+        setModalVisible(true);
+      },
+      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+    );
+    setModalVisible(true);
   };
 
-  useEffect(() => {
-    loadSavedPolygons();
-  }, []);
-
-  useEffect(() => {
-    if (selectedCoordinates?.length > 0) {
-      const closedCoordinates = [
-        ...selectedCoordinates,
-        selectedCoordinates[0],
-      ]; // Close the polygon by repeating the first point
-      const calculatedArea = calculateArea(closedCoordinates);
-      setArea(calculatedArea);
-    } else {
-      setArea(null);
-    }
-  }, [selectedCoordinates]);
-
+  // Handle modal submit
+  const handleSubmit = () => {
+    setModalVisible(false);
+    navigation.navigate('LiveLocation', {
+      propslocation: location,
+      desiredAccuracy: input,
+    });
+  };
+  console.log(typeof input, input);
   return (
-    <View style={{flex: 1}}>
-      <MapViewComponent
-        currentCoordinates={currentCoordinates}
-        setCurrentCoordinates={setCurrentCoordinates}
-        savedPolygons={savedPolygons}
-        setArea={setArea}
-        editable={editable}
-        setSelectedCoordinates={setSelectedCoordinates}
-        calculateArea={calculateArea}
+    <View style={styles.container}>
+      <FlatList
+        data={buttons}
+        renderItem={renderButton}
+        keyExtractor={(item, index) => index.toString()}
+        numColumns={2} // This will display 2 buttons per row
+        contentContainerStyle={styles.buttonContainer}
       />
-      {area && editable && <AreaDisplay area={area} />}
-      <PolygonControls
-        editable={editable}
-        clearCoordinates={clearCoordinates}
-        savePolygons={savePolygons}
-        savedPolygons={savedPolygons}
-        currentCoordinates={currentCoordinates}
-        setEditable={setEditable}
-      />
-      {selectedCoordinates.length > 0 && (
-        <MessageModal
-          visible={selectedCoordinates.length > 0}
-          setModalVisible={() => setSelectedCoordinates([])}
-          handleSubmit={handleDeletePolygon}
-          coordinates={selectedCoordinates}
-          area={area}
-        />
-      )}
+
+      {/* Modal for location accuracy input */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={false} // Set to false for testing, change as needed
+        onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Please Enter Desired Accuracy</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              value={input}
+              onChangeText={number => setInput(Number(number))}
+              placeholder="Enter 2 digit"
+              placeholderTextColor={'#757575'}
+            />
+            <View style={styles.modalButtons}>
+              <Button title="Cancel" onPress={() => setModalVisible(false)} />
+              <Button title="Submit" disabled={!input} onPress={handleSubmit} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 10,
+  },
+  buttonContainer: {
+    justifyContent: 'space-between',
+  },
+  buttonWrapper: {
+    flex: 1,
+    marginVertical: 5,
+    marginHorizontal: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Light transparency for modal background
+  },
+  modal: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    marginBottom: 10,
+    color: 'black', // Make sure the text is readable
+  },
+  input: {
+    height: 40,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    color: 'black',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+});
 
 export default Dashboard;
