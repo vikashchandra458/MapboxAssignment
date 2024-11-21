@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Button,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Geolocation from 'react-native-geolocation-service';
-
+import CustomButton from '../Components/CustomButton';
 const Dashboard = () => {
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
@@ -33,7 +33,20 @@ const Dashboard = () => {
   // Render each button with FlatList
   const renderButton = ({item}) => (
     <View style={styles.buttonWrapper}>
-      <Button
+      <CustomButton
+        onPress={() => {
+          if (item.name == 'Live Location') {
+            setModalVisible(true);
+            getCurrentLocation();
+          } else {
+            navigation.navigate(item.screen);
+          }
+        }}
+        isValid={true}
+        title={item.name}
+        style={{width: '100%'}}
+      />
+      {/* <Button
         title={item.name}
         onPress={() => {
           if (item.name == 'Live Location') {
@@ -43,7 +56,7 @@ const Dashboard = () => {
             navigation.navigate(item.screen);
           }
         }}
-      />
+      /> */}
     </View>
   );
 
@@ -105,11 +118,12 @@ const Dashboard = () => {
   };
 
   // Handle modal submit
-  const handleSubmit = () => {
+  const handleSubmit = number => {
     setModalVisible(false);
+    setInput('');
     navigation.navigate('LiveLocation', {
       propslocation: location,
-      desiredAccuracy: input,
+      desiredAccuracy: number || input || '0',
     });
   };
   console.log(typeof input, input);
@@ -131,18 +145,51 @@ const Dashboard = () => {
         onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modal}>
+            <CustomButton
+              onPress={() => {
+                handleSubmit(0);
+              }}
+              isValid={true}
+              title={'Go Live'}
+              style={{width: '100%'}}
+            />
+            <Text
+              style={[
+                styles.modalTitle,
+                {textAlign: 'center', width: '100%', marginVertical: 20},
+              ]}>
+              Or
+            </Text>
             <Text style={styles.modalTitle}>Please Enter Desired Accuracy</Text>
             <TextInput
               style={styles.input}
               keyboardType="numeric"
-              value={input}
+              value={input != 0 ? String(input) : ''}
               onChangeText={number => setInput(Number(number))}
               placeholder="Enter 2 digit"
               placeholderTextColor={'#757575'}
             />
             <View style={styles.modalButtons}>
-              <Button title="Cancel" onPress={() => setModalVisible(false)} />
-              <Button title="Submit" disabled={!input} onPress={handleSubmit} />
+              <CustomButton
+                onPress={() => setModalVisible(false)}
+                isValid={true}
+                title={'Cancel'}
+                textStyle={{color: '#8D00FF'}}
+                style={{
+                  width: '45%',
+                  backgroundColor: 'white',
+                  borderWidth: 1,
+                  borderColor: '#8D00FF',
+                }}
+              />
+              <CustomButton
+                onPress={() => {
+                  handleSubmit(input);
+                }}
+                isValid={input}
+                title={'Submit'}
+                style={{width: '45%'}}
+              />
             </View>
           </View>
         </View>

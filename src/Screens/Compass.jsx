@@ -128,7 +128,7 @@ const Compass = ({rotation, heading, setHeading, independent, setAngle}) => {
       <View
         style={
           independent
-            ? styles.compassContainer
+            ? [styles.compassContainer, landscape && {left: 60}]
             : {
                 alignSelf: 'center',
                 alignItems: 'center',
