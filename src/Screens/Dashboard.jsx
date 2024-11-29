@@ -17,7 +17,9 @@ import CustomButton from '../Components/CustomButton';
 const Dashboard = () => {
   const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
+  const [webViewVisible, setWebViewVisible] = useState(false);
   const [input, setInput] = useState('');
+  const [inputURL, setInputURL] = useState('');
   const [location, setLocation] = useState(null);
 
   const buttons = [
@@ -25,6 +27,7 @@ const Dashboard = () => {
     {name: 'Live Location', screen: 'LiveLocation'},
     {name: 'Compass', screen: 'Compass'},
     {name: 'Compass Heading', screen: 'CompassComponent'},
+    {name: 'WebView Browser', screen: 'WebViewDashboard'},
   ];
 
   // Log button data for debugging
@@ -38,6 +41,8 @@ const Dashboard = () => {
           if (item.name == 'Live Location') {
             setModalVisible(true);
             getCurrentLocation();
+          } else if (item.name == 'WebView Browser') {
+            setWebViewVisible(true);
           } else {
             navigation.navigate(item.screen);
           }
@@ -126,6 +131,13 @@ const Dashboard = () => {
       desiredAccuracy: number || input || '0',
     });
   };
+
+  // Handle modal submit
+  const handleWebView = url => {
+    setWebViewVisible(false);
+    setInputURL('');
+    navigation.navigate('WebViewDashboard', {url: url || ''});
+  };
   console.log(typeof input, input);
   return (
     <View style={styles.container}>
@@ -187,6 +199,63 @@ const Dashboard = () => {
                   handleSubmit(input);
                 }}
                 isValid={input}
+                title={'Submit'}
+                style={{width: '45%'}}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal for location accuracy input */}
+      <Modal
+        visible={webViewVisible}
+        animationType="slide"
+        transparent={false} // Set to false for testing, change as needed
+        onRequestClose={() => setWebViewVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modal}>
+            <CustomButton
+              onPress={() => {
+                handleWebView();
+              }}
+              isValid={true}
+              title={'Search on Google'}
+              style={{width: '100%'}}
+            />
+            <Text
+              style={[
+                styles.modalTitle,
+                {textAlign: 'center', width: '100%', marginVertical: 20},
+              ]}>
+              Or
+            </Text>
+            <Text style={styles.modalTitle}>Please Enter URL / Search</Text>
+            <TextInput
+              style={styles.input}
+              value={inputURL}
+              onChangeText={url => setInputURL(url)}
+              placeholder="Enter the url / search"
+              placeholderTextColor={'#757575'}
+            />
+            <View style={styles.modalButtons}>
+              <CustomButton
+                onPress={() => setWebViewVisible(false)}
+                isValid={true}
+                title={'Cancel'}
+                textStyle={{color: '#8D00FF'}}
+                style={{
+                  width: '45%',
+                  backgroundColor: 'white',
+                  borderWidth: 1,
+                  borderColor: '#8D00FF',
+                }}
+              />
+              <CustomButton
+                onPress={() => {
+                  handleWebView(inputURL);
+                }}
+                isValid={inputURL}
                 title={'Submit'}
                 style={{width: '45%'}}
               />

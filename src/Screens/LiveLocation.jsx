@@ -541,6 +541,7 @@ const LiveLocation = ({route}) => {
         />
       </TouchableOpacity>
       <TouchableOpacity
+        disabled={!isLive}
         style={[styles.toggleButton, {bottom: 170}]}
         onPress={() => setAutoCenter(!autoCenter)}>
         <Icon

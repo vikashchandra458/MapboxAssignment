@@ -4,11 +4,12 @@ import LottieView from 'lottie-react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Dashboard from './src/Screens/Dashboard';
-import PolygonDraw from './src/Screens/PolygonDraw'; // Assuming you have these components
+import PolygonDraw from './src/Screens/PolygonDraw'; 
 import LiveLocation from './src/Screens/LiveLocation';
 import HighFrequencyCompass from './src/Screens/HighFrequencyCompass';
 import Compass from './src/Screens/Compass';
 import CompassComponent from './src/Screens/CompassComponent';
+import WebViewDashboard from './src/Screens/WebViewDashboard';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
             <Stack.Screen name="LiveLocation" component={LiveLocation} />
             <Stack.Screen name="Compass" component={Compass} />
             <Stack.Screen name="CompassComponent" component={CompassComponent} />
+            <Stack.Screen name="WebViewDashboard" component={WebViewDashboard} />
             <Stack.Screen
               name="HighFrequencyCompass"
               component={HighFrequencyCompass}
