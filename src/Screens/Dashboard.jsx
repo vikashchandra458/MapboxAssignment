@@ -28,10 +28,11 @@ const Dashboard = () => {
     {name: 'Compass', screen: 'Compass'},
     {name: 'Compass Heading', screen: 'CompassComponent'},
     {name: 'WebView Browser', screen: 'WebViewDashboard'},
+    {name: 'Bluetooth & NFC', screen: 'BluetoothNFCReader'},
   ];
 
   // Log button data for debugging
-  console.log('Buttons array:', buttons);
+  // console.log('Buttons array:', buttons);
 
   // Render each button with FlatList
   const renderButton = ({item}) => (
