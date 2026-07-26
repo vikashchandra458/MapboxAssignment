@@ -29,6 +29,7 @@ const Dashboard = () => {
     {name: 'Compass Heading', screen: 'CompassComponent'},
     {name: 'WebView Browser', screen: 'WebViewDashboard'},
     {name: 'Bluetooth & NFC', screen: 'BluetoothNFCReader'},
+    {name: 'Screen Protection', screen: 'ScreenProtection'},
   ];
 
   // Log button data for debugging

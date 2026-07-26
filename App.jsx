@@ -11,6 +11,7 @@ import Compass from './src/Screens/Compass';
 import CompassComponent from './src/Screens/CompassComponent';
 import WebViewDashboard from './src/Screens/WebViewDashboard';
 import BluetoothNFCReader from './src/Screens/Bluetooth/BluetoothNFCReader';
+import ScreenProtection from './src/Screens/ScreenProtection/ScreenProtection';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -61,6 +62,10 @@ export default function App() {
             <Stack.Screen
               name="HighFrequencyCompass"
               component={HighFrequencyCompass}
+            />
+            <Stack.Screen
+              name='ScreenProtection'
+              component={ScreenProtection}
             />
           </Stack.Navigator>
         </NavigationContainer>
