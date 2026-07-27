@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -10,8 +10,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-import {BleManager, State} from 'react-native-ble-plx';
-import NfcManager, {NfcTech} from 'react-native-nfc-manager';
+import { BleManager, State } from 'react-native-ble-plx';
+import NfcManager, { NfcTech } from 'react-native-nfc-manager';
 
 import Header from './Header';
 import StatusCard from './StatusCard';
@@ -58,7 +58,7 @@ const BluetoothNFCReader = () => {
         clearTimeout(scanTimeoutRef.current);
       }
       stopConnectionMonitor();
-      manager.destroy();
+      // manager?.destroy();
     };
   }, []);
   const requestBluetoothPermission = async () => {
@@ -75,9 +75,9 @@ const BluetoothNFCReader = () => {
 
       return (
         granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] ===
-          PermissionsAndroid.RESULTS.GRANTED &&
+        PermissionsAndroid.RESULTS.GRANTED &&
         granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] ===
-          PermissionsAndroid.RESULTS.GRANTED
+        PermissionsAndroid.RESULTS.GRANTED
       );
     }
 
@@ -222,9 +222,9 @@ const BluetoothNFCReader = () => {
             prev.map(d =>
               d.id === device.id
                 ? {
-                    ...d,
-                    connected: false,
-                  }
+                  ...d,
+                  connected: false,
+                }
                 : d,
             ),
           );
@@ -290,9 +290,9 @@ const BluetoothNFCReader = () => {
 
             return d.id === disconnectedDevice?.id
               ? {
-                  ...d,
-                  connected: false,
-                }
+                ...d,
+                connected: false,
+              }
               : d;
           });
         });
@@ -302,9 +302,9 @@ const BluetoothNFCReader = () => {
         prev.map(d =>
           d.id === device.id
             ? {
-                ...d,
-                connected: true,
-              }
+              ...d,
+              connected: true,
+            }
             : d,
         ),
       );
@@ -330,9 +330,9 @@ const BluetoothNFCReader = () => {
         prev.map(d =>
           d.id === device.id
             ? {
-                ...d,
-                connected: false,
-              }
+              ...d,
+              connected: false,
+            }
             : d,
         ),
       );
@@ -394,7 +394,7 @@ const BluetoothNFCReader = () => {
           <ActivityIndicator
             size="large"
             color="#3B82F6"
-            style={{marginVertical: 20}}
+            style={{ marginVertical: 20 }}
           />
         )}
         {devices.length === 0 ? (
