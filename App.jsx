@@ -13,6 +13,7 @@ import WebViewDashboard from './src/Screens/WebViewDashboard';
 import BluetoothNFCReader from './src/Screens/Bluetooth/BluetoothNFCReader';
 import ScreenProtection from './src/Screens/ScreenProtection/ScreenProtection';
 import DraggableCard from './src/Screens/DraggableCard/DraggableCard';
+import DraggableFloatingButton from './src/Screens/DraggableCard/DraggableFloatingButton';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -71,6 +72,10 @@ export default function App() {
             <Stack.Screen
               name='DraggableCard'
               component={DraggableCard}
+            />
+            <Stack.Screen
+              name='DraggableFloatingButton'
+              component={DraggableFloatingButton}
             />
           </Stack.Navigator>
         </NavigationContainer>
