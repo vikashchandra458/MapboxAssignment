@@ -12,6 +12,7 @@ import CompassComponent from './src/Screens/CompassComponent';
 import WebViewDashboard from './src/Screens/WebViewDashboard';
 import BluetoothNFCReader from './src/Screens/Bluetooth/BluetoothNFCReader';
 import ScreenProtection from './src/Screens/ScreenProtection/ScreenProtection';
+import DraggableCard from './src/Screens/DraggableCard/DraggableCard';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -66,6 +67,10 @@ export default function App() {
             <Stack.Screen
               name='ScreenProtection'
               component={ScreenProtection}
+            />
+            <Stack.Screen
+              name='DraggableCard'
+              component={DraggableCard}
             />
           </Stack.Navigator>
         </NavigationContainer>

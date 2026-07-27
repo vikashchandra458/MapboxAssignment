@@ -30,6 +30,7 @@ const Dashboard = () => {
     {name: 'WebView Browser', screen: 'WebViewDashboard'},
     {name: 'Bluetooth & NFC', screen: 'BluetoothNFCReader'},
     {name: 'Screen Protection', screen: 'ScreenProtection'},
+    {name: 'Draggable card', screen: 'DraggableCard'},
   ];
 
   // Log button data for debugging
