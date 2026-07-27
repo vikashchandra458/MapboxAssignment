@@ -8,9 +8,9 @@ import {
     StatusBar,
 } from 'react-native';
 
-import DraggableFlatList, {
-    ScaleDecorator,
-} from 'react-native-draggable-flatlist';
+// import DraggableFlatList, {
+//     ScaleDecorator,
+// } from 'react-native-draggable-flatlist';
 
 const INITIAL_DATA = [
     {
@@ -48,38 +48,38 @@ const INITIAL_DATA = [
 export default function DraggableCard() {
     const [data, setData] = useState(INITIAL_DATA);
 
-    const renderItem = ({ item, drag, isActive, getIndex }) => (
-        <ScaleDecorator>
-            <Pressable
-                onLongPress={drag}
-                delayLongPress={150}
-                disabled={isActive}
-                style={[
-                    styles.card,
-                    isActive && styles.activeCard,
-                ]}>
-                <View
-                    style={[
-                        styles.colorBar,
-                        { backgroundColor: item.color },
-                    ]}
-                />
+    // const renderItem = ({ item, drag, isActive, getIndex }) => (
+    //     <ScaleDecorator>
+    //         <Pressable
+    //             onLongPress={drag}
+    //             delayLongPress={150}
+    //             disabled={isActive}
+    //             style={[
+    //                 styles.card,
+    //                 isActive && styles.activeCard,
+    //             ]}>
+    //             <View
+    //                 style={[
+    //                     styles.colorBar,
+    //                     { backgroundColor: item.color },
+    //                 ]}
+    //             />
 
-                <View style={styles.content}>
-                    <Text style={styles.title}>{item.title}</Text>
-                    <Text style={styles.subtitle}>{item.subtitle}</Text>
-                </View>
+    //             <View style={styles.content}>
+    //                 <Text style={styles.title}>{item.title}</Text>
+    //                 <Text style={styles.subtitle}>{item.subtitle}</Text>
+    //             </View>
 
-                <View style={styles.right}>
-                    <Text style={styles.index}>
-                        #{(getIndex?.() ?? 0) + 1}
-                    </Text>
+    //             <View style={styles.right}>
+    //                 <Text style={styles.index}>
+    //                     #{(getIndex?.() ?? 0) + 1}
+    //                 </Text>
 
-                    <Text style={styles.dragIcon}>☰</Text>
-                </View>
-            </Pressable>
-        </ScaleDecorator>
-    );
+    //                 <Text style={styles.dragIcon}>☰</Text>
+    //             </View>
+    //         </Pressable>
+    //     </ScaleDecorator>
+    // );
 
     return (
         <SafeAreaView style={styles.container}>
@@ -96,7 +96,7 @@ export default function DraggableCard() {
                 Long press any card to reorder.
             </Text>
 
-            <DraggableFlatList
+            {/* <DraggableFlatList
                 data={data}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
@@ -108,7 +108,7 @@ export default function DraggableCard() {
                 contentContainerStyle={{
                     paddingBottom: 20,
                 }}
-            />
+            /> */}
 
             <Pressable
                 style={styles.button}

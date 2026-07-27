@@ -31,7 +31,8 @@ const Dashboard = () => {
     {name: 'Bluetooth & NFC', screen: 'BluetoothNFCReader'},
     {name: 'Screen Protection', screen: 'ScreenProtection'},
     {name: 'Draggable card', screen: 'DraggableCard'},
-    {name: 'Draggable Floating Button', screen: 'DraggableFloatingButton'},
+    {name: 'Floating Button', screen: 'DraggableFloatingButton'},
+    {name: 'PipModuleUI', screen: 'PipModuleUI'},
   ];
 
   // Log button data for debugging
