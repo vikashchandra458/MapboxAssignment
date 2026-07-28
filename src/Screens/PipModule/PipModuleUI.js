@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    AppState,
     NativeEventEmitter,
     NativeModules,
     SafeAreaView,
@@ -19,7 +18,6 @@ import { getCachedVideo } from '../../Utils/videoCache';
 
 export default function PipModuleUI() {
     const videoRef = useRef(null);
-    const appState = useRef(AppState.currentState);
     const [videoPath, setVideoPath] = useState(null);
     const [loading, setLoading] = useState(true);
     const [downloadProgress, setDownloadProgress] = useState(0);
@@ -36,8 +34,8 @@ export default function PipModuleUI() {
 
         const subscription = emitter.addListener(
             'onPictureInPictureModeChanged',
-            value => {
-                setIsPipMode(value);
+            event => {
+                setIsPipMode(event.isInPictureInPictureMode);
             },
         );
 
