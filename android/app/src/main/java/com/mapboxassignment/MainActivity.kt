@@ -13,9 +13,9 @@ class MainActivity : ReactActivity() {
         super.onCreate(null)
     }
 
-    override fun getMainComponentName(): String = "MapboxAssignment"
+    override fun getMainComponentName() = "MapboxAssignment"
 
-    override fun createReactActivityDelegate(): ReactActivityDelegate =
+    override fun createReactActivityDelegate() =
         DefaultReactActivityDelegate(
             this,
             mainComponentName,
@@ -24,6 +24,7 @@ class MainActivity : ReactActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+
         PipModule.instance?.enterPipIfNeeded()
     }
 

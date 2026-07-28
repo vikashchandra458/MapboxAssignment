@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     NativeEventEmitter,
-    NativeModules,
     SafeAreaView,
     StyleSheet,
     Text,
@@ -14,6 +13,7 @@ import Video from 'react-native-video';
 import PipModule from '../../Utils/PipModule';
 
 import { getCachedVideo } from '../../Utils/videoCache';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 export default function PipModuleUI() {
@@ -28,9 +28,19 @@ export default function PipModuleUI() {
         loadVideo();
     }, []);
 
+    useFocusEffect(
+        useCallback(() => {
+            PipModule.setPipEnabled(true);
+
+            return () => {
+                PipModule.setPipEnabled(false);
+                PipModule.setVideoPlaying(false);
+            };
+        }, []),
+    );
 
     useEffect(() => {
-        const emitter = new NativeEventEmitter(NativeModules.PipModule);
+        const emitter = new NativeEventEmitter(PipModule);
 
         const subscription = emitter.addListener(
             'onPictureInPictureModeChanged',
