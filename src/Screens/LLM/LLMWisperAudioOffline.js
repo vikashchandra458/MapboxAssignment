@@ -21,15 +21,15 @@ const { WhisperModule, RNLiveAudioStream } = NativeModules;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DocumentPicker from 'react-native-document-picker';
-// import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import Markdown from 'react-native-markdown-display';
 
-// const recorder = new AudioRecorderPlayer();
 import { Buffer } from 'buffer';
 const MODEL_DOWNLOAD_KEY = 'WHISPER_MODEL_DOWNLOADED';
 const DEFAULT_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin';
 const DEFAULT_MODEL_NAME = 'ggml-base.en.bin';
 const DEFAULT_MODEL_PATH = `${RNFS.DocumentDirectoryPath}/${DEFAULT_MODEL_NAME}`;
 const outputPath = `${RNFS.DocumentDirectoryPath}/recording.wav`;
+const liveOutputPath = `${RNFS.CachesDirectoryPath}/live-recording.wav`;
 
 if (WhisperModule) {
   WhisperModule.addListener = WhisperModule.addListener || (() => { });
@@ -103,8 +103,13 @@ const collapseRepeatedTranscript = value => {
 
 export default function LLMWisperAudioOffline() {
   const pcmChunks = useRef([]);
+  const liveTimerRef = useRef(null);
+  const liveTranscribingRef = useRef(false);
+  const lastLiveBytesRef = useRef(0);
+  const liveTranscriptRef = useRef('');
 
   const [loading, setLoading] = useState(false);
+  const [liveUpdating, setLiveUpdating] = useState(false);
   const [modelLoaded, setModelLoaded] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -122,6 +127,7 @@ export default function LLMWisperAudioOffline() {
   const [audioPath, setAudioPath] = useState('');
 
   const [transcript, setTranscript] = useState('');
+  const [recordingMode, setRecordingMode] = useState('single');
   const requestMicPermission = async () => {
     if (Platform.OS !== 'android') {
       return true;
@@ -138,22 +144,51 @@ export default function LLMWisperAudioOffline() {
 
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
-  useEffect(() => {
-    LiveAudioStream.init({
-      sampleRate: 16000,
-      channels: 1,
-      bitsPerSample: 16,
-      audioSource: 6,
-      bufferSize: 4096,
-    });
+  const streamInitializedRef = useRef(false);
 
-    const subscription = LiveAudioStream.on("data", data => {
-      pcmChunks.current.push(Buffer.from(data, "base64"));
-    });
+  useEffect(() => {
+    let subscription;
+
+    const initAudio = async () => {
+      try {
+        const granted = await requestMicPermission();
+
+        if (!granted) {
+          console.warn("Microphone permission denied");
+          return;
+        }
+
+        LiveAudioStream.init({
+          sampleRate: 16000,
+          channels: 1,
+          bitsPerSample: 16,
+          audioSource: 1,      // Prefer MIC instead of 6
+          bufferSize: 4096,
+        });
+
+        streamInitializedRef.current = true;
+
+        subscription = LiveAudioStream.on("data", data => {
+          pcmChunks.current.push(Buffer.from(data, "base64"));
+        });
+      } catch (e) {
+        console.error("LiveAudioStream init failed:", e);
+        streamInitializedRef.current = false;
+      }
+    };
+
+    initAudio();
 
     return () => {
-      LiveAudioStream.stop();
+      try {
+        if (streamInitializedRef.current) {
+          LiveAudioStream.stop();
+        }
+      } catch (e) { }
+
+      stopLiveTranscription();
       subscription?.remove();
+      streamInitializedRef.current = false;
     };
   }, []);
 
@@ -178,6 +213,24 @@ export default function LLMWisperAudioOffline() {
 
     return header;
   };
+
+  const writeWavFile = async (path, pcm) => {
+    const wavHeader = createWavHeader(pcm.length);
+    const wav = Buffer.concat([wavHeader, pcm]);
+
+    await RNFS.writeFile(
+      path,
+      wav.toString("base64"),
+      "base64",
+    );
+
+    return path;
+  };
+
+  const getTranscriptionOptions = () => ({
+    language: 'en',
+    translate: false,
+  });
 
   const onUrlChange = text => {
     setModelUrl(text);
@@ -208,8 +261,8 @@ export default function LLMWisperAudioOffline() {
   }, [uploading]);
   useEffect(() => {
     (async () => {
-      await loadModelInfo();
-      await checkModel();
+      const savedModel = await loadModelInfo();
+      await checkModel(savedModel?.path);
     })();
   }, []);
   const loadModelInfo = async () => {
@@ -223,15 +276,31 @@ export default function LLMWisperAudioOffline() {
       const data = Object.fromEntries(values);
       // console.log('Get : ', {...data});
 
-      setModelUrl(prev => data.MODEL_URL || prev || DEFAULT_MODEL_URL);
-      setModelName(prev => data.MODEL_NAME || prev || DEFAULT_MODEL_NAME);
-      setModelPath(prev => data.MODEL_PATH || prev || DEFAULT_MODEL_PATH);
+      const saved = {
+        url: data.MODEL_URL || DEFAULT_MODEL_URL,
+        name: data.MODEL_NAME || DEFAULT_MODEL_NAME,
+        path: data.MODEL_PATH || DEFAULT_MODEL_PATH,
+      };
+
+      setModelUrl(saved.url);
+      setModelName(saved.name);
+      setModelPath(saved.path);
+
+      return saved;
     } catch (error) {
       console.log('loadModelInfo error:', error);
 
-      setModelUrl(prev => prev || DEFAULT_MODEL_URL);
-      setModelName(prev => prev || DEFAULT_MODEL_NAME);
-      setModelPath(prev => prev || DEFAULT_MODEL_PATH);
+      const fallback = {
+        url: DEFAULT_MODEL_URL,
+        name: DEFAULT_MODEL_NAME,
+        path: DEFAULT_MODEL_PATH,
+      };
+
+      setModelUrl(fallback.url);
+      setModelName(fallback.name);
+      setModelPath(fallback.path);
+
+      return fallback;
     }
   };
 
@@ -261,7 +330,7 @@ export default function LLMWisperAudioOffline() {
       setModelPath(prev => prev || path || DEFAULT_MODEL_PATH);
     }
   };
-  const checkModel = async () => {
+  const checkModel = async savedPath => {
     try {
       const downloaded = await AsyncStorage.getItem(MODEL_DOWNLOAD_KEY);
 
@@ -270,7 +339,8 @@ export default function LLMWisperAudioOffline() {
         return;
       }
 
-      const exists = await RNFS.exists(modelPath);
+      const pathToLoad = savedPath || modelPath;
+      const exists = await RNFS.exists(pathToLoad);
 
       if (!exists) {
         await AsyncStorage.removeItem(MODEL_DOWNLOAD_KEY);
@@ -278,16 +348,16 @@ export default function LLMWisperAudioOffline() {
         return;
       }
 
-      await loadModel();
+      await loadModel(pathToLoad);
     } catch (e) {
       console.log(e);
       setModelLoaded(false);
     }
   };
 
-  const loadModel = async () => {
+  const loadModel = async pathToLoad => {
     try {
-      const loaded = await WhisperModule.loadModel(modelPath);
+      const loaded = await WhisperModule.loadModel(pathToLoad || modelPath);
 
       setModelLoaded(loaded);
 
@@ -407,7 +477,8 @@ export default function LLMWisperAudioOffline() {
 
       setLoading(true);
       console.log("path : ", path)
-      const text = await WhisperModule.transcribe(path);
+      const { language, translate } = getTranscriptionOptions();
+      const text = await WhisperModule.transcribe(path, language, translate);
       console.log("text : ", text)
       setTranscript(collapseRepeatedTranscript(text) || 'No speech detected.');
     } catch (e) {
@@ -417,6 +488,87 @@ export default function LLMWisperAudioOffline() {
       setLoading(false);
     }
   };
+
+  const transcribeLiveSnapshot = async () => {
+    if (liveTranscribingRef.current) {
+      return;
+    }
+
+    const allPcm = Buffer.concat(pcmChunks.current);
+    const bytesPerSecond = 16000 * 2;
+    const minBytes = Math.floor(bytesPerSecond * 1.5);
+    const hasEnoughAudio = allPcm.length >= minBytes;
+    const hasNewAudio = allPcm.length - lastLiveBytesRef.current >= minBytes;
+
+    if (!hasEnoughAudio || !hasNewAudio) {
+      return;
+    }
+
+    const overlapBytes = Math.floor(bytesPerSecond * 0.35);
+    const chunkStart = Math.max(0, lastLiveBytesRef.current - overlapBytes);
+    const pcm = allPcm.slice(chunkStart);
+
+    liveTranscribingRef.current = true;
+    setLiveUpdating(true);
+
+    try {
+      await writeWavFile(liveOutputPath, pcm);
+
+      const { language, translate } = getTranscriptionOptions();
+      const text = await WhisperModule.transcribe(liveOutputPath, language, translate);
+      const cleanedText = collapseRepeatedTranscript(text);
+
+      if (
+        cleanedText &&
+        cleanedText !== 'Audio is silent' &&
+        cleanedText !== 'No speech detected.'
+      ) {
+        setTranscript(previous => {
+          const normalizedPrevious = previous.trim();
+          const normalizedNext = cleanedText.trim();
+
+          if (!normalizedPrevious) {
+            liveTranscriptRef.current = normalizedNext;
+            return normalizedNext;
+          }
+
+          if (normalizedPrevious.endsWith(normalizedNext)) {
+            liveTranscriptRef.current = normalizedPrevious;
+            return normalizedPrevious;
+          }
+
+          const combined = `${normalizedPrevious} ${normalizedNext}`.trim();
+          liveTranscriptRef.current = combined;
+          return combined;
+        });
+      }
+
+      lastLiveBytesRef.current = allPcm.length;
+    } catch (error) {
+      console.log('live transcript error:', error);
+    } finally {
+      liveTranscribingRef.current = false;
+      setLiveUpdating(false);
+    }
+  };
+
+  const startLiveTranscription = () => {
+    if (liveTimerRef.current) {
+      clearInterval(liveTimerRef.current);
+    }
+
+    lastLiveBytesRef.current = 0;
+    liveTranscriptRef.current = '';
+    liveTimerRef.current = setInterval(transcribeLiveSnapshot, 1800);
+  };
+
+  const stopLiveTranscription = () => {
+    if (liveTimerRef.current) {
+      clearInterval(liveTimerRef.current);
+      liveTimerRef.current = null;
+    }
+  };
+
   const toggleRecording = async () => {
     try {
       if (!modelLoaded) {
@@ -436,12 +588,22 @@ export default function LLMWisperAudioOffline() {
 
         const recordedPath = await startRecording();
 
+        if (!recordedPath) {
+          return;
+        }
+
         setAudioPath(recordedPath);
+
+        if (recordingMode === 'live') {
+          startLiveTranscription();
+        }
 
         // setIsRecording(true);
 
         return;
       }
+
+      stopLiveTranscription();
 
       const recordedPath = await stopRecording();
 
@@ -449,10 +611,14 @@ export default function LLMWisperAudioOffline() {
 
       setAudioPath(recordedPath);
       console.log("recorded Path : ", recordedPath)
-      await transcribeAudio(recordedPath);
+
+      if (recordingMode === 'single') {
+        await transcribeAudio(recordedPath);
+      }
     } catch (e) {
       console.log(e);
 
+      stopLiveTranscription();
       setIsRecording(false);
 
       alert('Recording failed.');
@@ -518,19 +684,28 @@ export default function LLMWisperAudioOffline() {
 
 
   const startRecording = async () => {
+    if (!streamInitializedRef.current) {
+      alert("Microphone is not initialized.");
+      return null;
+    }
+
     pcmChunks.current = [];
 
     if (await RNFS.exists(outputPath)) {
       await RNFS.unlink(outputPath);
     }
 
-    LiveAudioStream.start();
-
-    setIsRecording(true);
-
-    return outputPath;
+    try {
+      LiveAudioStream.start();
+      setIsRecording(true);
+      return outputPath;
+    } catch (e) {
+      console.error("Failed to start recording:", e);
+      setIsRecording(false);
+      alert("Unable to start microphone.");
+      return null;
+    }
   };
-
   const stopRecording = async () => {
 
     LiveAudioStream.stop();
@@ -541,16 +716,16 @@ export default function LLMWisperAudioOffline() {
 
     const pcm = Buffer.concat(pcmChunks.current);
 
-    const wavHeader = createWavHeader(pcm.length);
+    await writeWavFile(outputPath, pcm);
 
-    const wav = Buffer.concat([wavHeader, pcm]);
+    console.log("PCM bytes:", pcm.length);
 
-    await RNFS.writeFile(
-      outputPath,
-      wav.toString("base64"),
-      "base64",
-    );
     const stat = await RNFS.stat(outputPath);
+    console.log("WAV size:", stat.size);
+
+    console.log("Chunks:", pcmChunks.current.length);
+
+    console.log("Last chunk size:", pcmChunks.current.at(-1)?.length);
 
     console.log("WAV size:", stat.size);
 
@@ -558,7 +733,44 @@ export default function LLMWisperAudioOffline() {
   };
 
 
-
+  const markdownStyles = {
+    body: {
+      color: '#1E293B',
+      fontSize: 16,
+      lineHeight: 26,
+    },
+    heading1: {
+      fontSize: 24,
+      fontWeight: '700',
+      marginBottom: 12,
+    },
+    heading2: {
+      fontSize: 20,
+      fontWeight: '700',
+      marginTop: 12,
+      marginBottom: 8,
+    },
+    bullet_list: {
+      marginVertical: 6,
+    },
+    code_inline: {
+      backgroundColor: '#F1F5F9',
+      padding: 2,
+      borderRadius: 4,
+    },
+    fence: {
+      backgroundColor: '#0F172A',
+      color: '#fff',
+      padding: 12,
+      borderRadius: 8,
+    },
+    blockquote: {
+      borderLeftWidth: 4,
+      borderLeftColor: '#0F766E',
+      paddingLeft: 10,
+      color: '#64748B',
+    },
+  };
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -734,34 +946,83 @@ export default function LLMWisperAudioOffline() {
                 </View>
 
                 <View style={styles.statusCopy}>
-                  <Text style={styles.statusTitle}>Ready to Transcribe</Text>
+                  <Text style={styles.statusTitle}>
+                    {isRecording && recordingMode === 'live'
+                      ? 'Live Transcript Running'
+                      : 'Ready to Transcribe'}
+                  </Text>
                   <Text style={styles.statusSubtitle}>
                     {audioPath ? audioPath.split('/').pop() : modelName}
                   </Text>
                 </View>
               </View>
 
+              <View style={styles.modePanel}>
+                <View style={styles.modeGroup}>
+                  <Text style={styles.modeLabel}>Recording</Text>
+                  <View style={styles.segmentedControl}>
+                    <TouchableOpacity
+                      style={[
+                        styles.segmentButton,
+                        recordingMode === 'single' && styles.segmentButtonActive,
+                      ]}
+                      disabled={isRecording}
+                      onPress={() => setRecordingMode('single')}>
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          recordingMode === 'single' && styles.segmentTextActive,
+                        ]}>
+                        Single
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.segmentButton,
+                        recordingMode === 'live' && styles.segmentButtonActive,
+                      ]}
+                      disabled={isRecording}
+                      onPress={() => setRecordingMode('live')}>
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          recordingMode === 'live' && styles.segmentTextActive,
+                        ]}>
+                        Live
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+              </View>
+
               <View style={styles.resultCard}>
                 <View style={styles.resultHeader}>
                   <Text style={styles.resultTitle}>Transcript</Text>
-                  {loading ? (
+                  {loading || liveUpdating ? (
                     <View style={styles.inlineLoading}>
                       <ActivityIndicator size="small" color="#0F766E" />
-                      <Text style={styles.inlineLoadingText}>Transcribing</Text>
+                      <Text style={styles.inlineLoadingText}>
+                        {liveUpdating ? 'Updating live' : 'Transcribing'}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
 
                 <ScrollView
                   style={styles.transcriptScroll}
-                  contentContainerStyle={styles.transcriptContent}>
-                  <Text
-                    style={[
-                      styles.transcript,
-                      !transcript && styles.transcriptPlaceholder,
-                    ]}>
-                    {transcript || "No transcript yet"}
-                  </Text>
+                  contentContainerStyle={styles.transcriptContent}
+                >
+                  {transcript ? (
+                    <Markdown style={markdownStyles}>
+                      {transcript}
+                    </Markdown>
+                  ) : (
+                    <Text style={styles.transcriptPlaceholder}>
+                      No transcript yet
+                    </Text>
+                  )}
                 </ScrollView>
               </View>
             </View>
@@ -782,10 +1043,10 @@ export default function LLMWisperAudioOffline() {
                 style={[
                   styles.recordButton,
                   isRecording && styles.stopButton,
-                  loading && styles.disabledButton,
+                  loading && !isRecording && styles.disabledButton,
                 ]}
                 activeOpacity={0.9}
-                disabled={loading}
+                disabled={loading && !isRecording}
                 onPress={toggleRecording}>
                 <Ionicons
                   name={isRecording ? "stop" : "mic"}
@@ -1169,6 +1430,56 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: '#64748B',
     fontSize: 13,
+  },
+
+  modePanel: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  modeGroup: {
+    marginBottom: 12,
+  },
+
+  modeLabel: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+
+  segmentedControl: {
+    height: 42,
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    padding: 4,
+  },
+
+  segmentButton: {
+    flex: 1,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  segmentButtonActive: {
+    backgroundColor: '#0F766E',
+  },
+
+  segmentText: {
+    color: '#475569',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+
+  segmentTextActive: {
+    color: '#FFFFFF',
   },
 
   recordButton: {

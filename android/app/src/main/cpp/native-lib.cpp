@@ -98,7 +98,9 @@ JNIEXPORT jstring JNICALL
 Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
         JNIEnv *env,
         jobject,
-        jstring audioPath) {
+        jstring audioPath,
+        jstring language,
+        jboolean translate) {
 
     LOGI("========== nativeTranscribe ==========");
 
@@ -110,6 +112,13 @@ Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
     }
 
     const char *path = env->GetStringUTFChars(audioPath, nullptr);
+
+    if (language != nullptr) {
+        const char *languageChars = env->GetStringUTFChars(language, nullptr);
+        if (languageChars != nullptr) {
+            env->ReleaseStringUTFChars(language, languageChars);
+        }
+    }
 
     LOGI("Audio Path : %s", path);
 
@@ -229,7 +238,7 @@ Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
 
     LOGI("Max amplitude = %f", maxAmp);
 
-    if (maxAmp < 0.001f) {
+    if (maxAmp < 0.0005f) {
         LOGE("Audio appears silent");
         return env->NewStringUTF("Audio is silent");
     }
@@ -249,6 +258,7 @@ Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
 
     params.translate = false;
     params.language = "en";
+    params.detect_language = false;
 
     params.no_context = true;
     params.no_timestamps = true;
@@ -257,19 +267,26 @@ Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
     params.offset_ms = 0;
     params.duration_ms = 0;
 
-    params.max_tokens =
-            std::max(8, std::min(32, (int) std::ceil(durationSec * 4.0f) + 8));
-    params.suppress_blank = true;
-    params.suppress_nst = true;
+    params.max_tokens = 48;
+
+    params.suppress_blank = false;
+    params.suppress_nst = false;
+
     params.temperature = 0.0f;
-    params.temperature_inc = 0.0f;
+    params.temperature_inc = 0.2f;
+
     params.greedy.best_of = 1;
+    params.thold_pt = 0.01f;
+    params.thold_ptsum = 0.01f;
+    params.no_speech_thold = 0.95f;
 
     const int maxAudioCtx = whisper_n_audio_ctx(g_ctx);
     if (durationSec > 0.0f && maxAudioCtx > 0) {
         const int requestedAudioCtx =
-                std::max(64, (int) std::ceil(durationSec * 50.0f) + 16);
+                std::max(128, (int) std::ceil(durationSec * 50.0f) + 24);
         params.audio_ctx = std::min(maxAudioCtx, requestedAudioCtx);
+    } else {
+        params.audio_ctx = 128;
     }
 
     LOGI("========== Whisper ==========");
@@ -277,6 +294,7 @@ Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
     LOGI("Samples  : %d", (int)pcmf32.size());
     LOGI("Threads  : %d", params.n_threads);
     LOGI("Language : %s", params.language);
+    LOGI("Translate: %d", params.translate);
     LOGI("AudioCtx : %d", params.audio_ctx);
     LOGI("MaxTokens: %d", params.max_tokens);
     LOGI("=============================");
@@ -319,9 +337,16 @@ Java_com_mapboxassignment_WhisperModule_nativeTranscribe(
         transcript += text;
     }
 
-    if (transcript.empty()) {
-        transcript = "No speech detected.";
-    }
+   transcript.erase(0, transcript.find_first_not_of(" \n\r\t"));
+
+size_t end = transcript.find_last_not_of(" \n\r\t");
+if (end != std::string::npos) {
+    transcript.erase(end + 1);
+}
+
+if (transcript.empty()) {
+    transcript = "No speech detected.";
+}
 
     LOGI("Transcript : %s", transcript.c_str());
 

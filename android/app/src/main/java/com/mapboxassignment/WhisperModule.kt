@@ -62,7 +62,7 @@ class WhisperModule(
     }
 
     @ReactMethod
-    fun transcribe(audioPath: String, promise: Promise) {
+    fun transcribe(audioPath: String, language: String?, translate: Boolean, promise: Promise) {
         logD("================================")
         logD("transcribe() called")
         logD("Audio path: $audioPath")
@@ -71,7 +71,7 @@ class WhisperModule(
             try {
                 logD("Calling nativeTranscribe()")
 
-                val result = nativeTranscribe(audioPath)
+                val result = nativeTranscribe(audioPath, language ?: "auto", translate)
 
                 logD("nativeTranscribe returned")
                 logD("Result: $result")
@@ -111,6 +111,6 @@ class WhisperModule(
     fun removeListeners(count: Int) {}
 
     private external fun nativeLoadModel(modelPath: String): Boolean
-    private external fun nativeTranscribe(audioPath: String): String
+    private external fun nativeTranscribe(audioPath: String, language: String, translate: Boolean): String
     private external fun nativeReleaseModel()
 }
