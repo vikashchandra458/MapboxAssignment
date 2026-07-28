@@ -20,6 +20,7 @@ class MainApplication : Application(), ReactApplication {
                 // Manually added packages
                 add(NativeSecurityPackage())
                 add(PipPackage())
+                add(WhisperPackage()) // <-- Add this
             }
 
         override fun getJSMainModuleName(): String = "index"
@@ -37,7 +38,6 @@ class MainApplication : Application(), ReactApplication {
     super.onCreate()
     SoLoader.init(this, false)
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-      // If you opted-in for the New Architecture, we load the native entry point for this app.
       load()
     }
   }

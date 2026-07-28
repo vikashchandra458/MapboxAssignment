@@ -40,7 +40,7 @@ export default function PipModuleUI() {
     );
 
     useEffect(() => {
-        const emitter = new NativeEventEmitter(PipModule);
+        const emitter = new NativeEventEmitter();
 
         const subscription = emitter.addListener(
             'onPictureInPictureModeChanged',

@@ -15,6 +15,7 @@ import ScreenProtection from './src/Screens/ScreenProtection/ScreenProtection';
 import DraggableCard from './src/Screens/DraggableCard/DraggableCard';
 import DraggableFloatingButton from './src/Screens/DraggableCard/DraggableFloatingButton';
 import PipModuleUI from './src/Screens/PipModule/PipModuleUI';
+import LLMWisperAudioOffline from './src/Screens/LLM/LLMWisperAudioOffline';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -81,6 +82,10 @@ export default function App() {
             <Stack.Screen
               name='PipModuleUI'
               component={PipModuleUI}
+            />
+            <Stack.Screen
+              name='LLMWisperAudioOffline'
+              component={LLMWisperAudioOffline}
             />
           </Stack.Navigator>
         </NavigationContainer>

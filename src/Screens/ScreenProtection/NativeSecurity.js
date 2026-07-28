@@ -8,7 +8,7 @@ if (!NativeSecurity) {
     );
 }
 
-const emitter = new NativeEventEmitter(NativeSecurity);
+const emitter = new NativeEventEmitter();
 
 const Security = {
     enable(options = {}) {

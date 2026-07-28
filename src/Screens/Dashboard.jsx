@@ -33,6 +33,7 @@ const Dashboard = () => {
     {name: 'Draggable card', screen: 'DraggableCard'},
     {name: 'Floating Button', screen: 'DraggableFloatingButton'},
     {name: 'PIP Mode', screen: 'PipModuleUI'},
+    {name: 'Speech to Text', screen: 'LLMWisperAudioOffline'},
   ];
 
   // Log button data for debugging
