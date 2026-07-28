@@ -24,6 +24,7 @@ import DocumentPicker from 'react-native-document-picker';
 import Markdown from 'react-native-markdown-display';
 
 import { Buffer } from 'buffer';
+import styles from './LlmStyles';
 const MODEL_DOWNLOAD_KEY = 'WHISPER_MODEL_DOWNLOADED';
 const DEFAULT_MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin';
 const DEFAULT_MODEL_NAME = 'ggml-base.en.bin';
@@ -476,10 +477,10 @@ export default function LLMWisperAudioOffline() {
       }
 
       setLoading(true);
-      console.log("path : ", path)
+      // console.log("path : ", path)
       const { language, translate } = getTranscriptionOptions();
       const text = await WhisperModule.transcribe(path, language, translate);
-      console.log("text : ", text)
+      // console.log("text : ", text)
       setTranscript(collapseRepeatedTranscript(text) || 'No speech detected.');
     } catch (e) {
       console.log(e);
@@ -584,7 +585,7 @@ export default function LLMWisperAudioOffline() {
       }
 
       if (!isRecording) {
-        setTranscript('');
+        clearTranscript();
 
         const recordedPath = await startRecording();
 
@@ -610,7 +611,7 @@ export default function LLMWisperAudioOffline() {
       setIsRecording(false);
 
       setAudioPath(recordedPath);
-      console.log("recorded Path : ", recordedPath)
+      // console.log("recorded Path : ", recordedPath)
 
       if (recordingMode === 'single') {
         await transcribeAudio(recordedPath);
@@ -666,7 +667,7 @@ export default function LLMWisperAudioOffline() {
       setDownloading(false);
 
       const loaded = await WhisperModule.loadModel(modelPath);
-      console.log("loaded : ", loaded)
+      // console.log("loaded : ", loaded)
       setModelLoaded(loaded);
 
       if (loaded) {
@@ -771,6 +772,16 @@ export default function LLMWisperAudioOffline() {
       color: '#64748B',
     },
   };
+
+  const clearTranscript = () => {
+    setTranscript('');
+    liveTranscriptRef.current = '';
+    lastLiveBytesRef.current = 0;
+    pcmChunks.current = [];
+  };
+  useEffect(() => {
+    clearTranscript();
+  }, [recordingMode])
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -939,115 +950,128 @@ export default function LLMWisperAudioOffline() {
         {/* Whisper Screen */}
         {modelLoaded && !downloading && !uploading && (
           <View style={styles.whisperContainer}>
-            <View style={styles.whisperContent}>
-              <View style={styles.statusCard}>
-                <View style={styles.statusIcon}>
-                  <Ionicons name="checkmark" color="#0F766E" size={22} />
-                </View>
 
-                <View style={styles.statusCopy}>
-                  <Text style={styles.statusTitle}>
-                    {isRecording && recordingMode === 'live'
-                      ? 'Live Transcript Running'
-                      : 'Ready to Transcribe'}
-                  </Text>
-                  <Text style={styles.statusSubtitle}>
-                    {audioPath ? audioPath.split('/').pop() : modelName}
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.topControls}>
 
-              <View style={styles.modePanel}>
-                <View style={styles.modeGroup}>
-                  <Text style={styles.modeLabel}>Recording</Text>
-                  <View style={styles.segmentedControl}>
-                    <TouchableOpacity
-                      style={[
-                        styles.segmentButton,
-                        recordingMode === 'single' && styles.segmentButtonActive,
-                      ]}
-                      disabled={isRecording}
-                      onPress={() => setRecordingMode('single')}>
-                      <Text
-                        style={[
-                          styles.segmentText,
-                          recordingMode === 'single' && styles.segmentTextActive,
-                        ]}>
-                        Single
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.segmentButton,
-                        recordingMode === 'live' && styles.segmentButtonActive,
-                      ]}
-                      disabled={isRecording}
-                      onPress={() => setRecordingMode('live')}>
-                      <Text
-                        style={[
-                          styles.segmentText,
-                          recordingMode === 'live' && styles.segmentTextActive,
-                        ]}>
-                        Live
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-              </View>
-
-              <View style={styles.resultCard}>
-                <View style={styles.resultHeader}>
-                  <Text style={styles.resultTitle}>Transcript</Text>
-                  {loading || liveUpdating ? (
-                    <View style={styles.inlineLoading}>
-                      <ActivityIndicator size="small" color="#0F766E" />
-                      <Text style={styles.inlineLoadingText}>
-                        {liveUpdating ? 'Updating live' : 'Transcribing'}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-
-                <ScrollView
-                  style={styles.transcriptScroll}
-                  contentContainerStyle={styles.transcriptContent}
-                >
-                  {transcript ? (
-                    <Markdown style={markdownStyles}>
-                      {transcript}
-                    </Markdown>
-                  ) : (
-                    <Text style={styles.transcriptPlaceholder}>
-                      No transcript yet
-                    </Text>
-                  )}
-                </ScrollView>
-              </View>
-            </View>
-
-            <View style={styles.bottomControls}>
               <TouchableOpacity
                 style={[
-                  styles.fileButton,
-                  (loading || isRecording) && styles.disabledSecondaryButton,
+                  styles.modeChip,
+                  recordingMode === "single" && styles.modeChipActive,
                 ]}
-                activeOpacity={0.85}
+                disabled={isRecording}
+                onPress={() => setRecordingMode("single")}
+              >
+                <Ionicons
+                  name="mic-outline"
+                  size={18}
+                  color={recordingMode === "single" ? "#fff" : "#0F766E"}
+                />
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    recordingMode === "single" && styles.modeChipTextActive,
+                  ]}>
+                  Single
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modeChip,
+                  recordingMode === "live" && styles.modeChipActive,
+                ]}
+                disabled={isRecording}
+                onPress={() => setRecordingMode("live")}
+              >
+                <Ionicons
+                  name="radio-outline"
+                  size={18}
+                  color={recordingMode === "live" ? "#fff" : "#0F766E"}
+                />
+                <Text
+                  style={[
+                    styles.modeChipText,
+                    recordingMode === "live" && styles.modeChipTextActive,
+                  ]}>
+                  Live
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+
+            <View style={styles.transcriptContainer}>
+
+              <View style={styles.transcriptHeader}>
+
+                <Text style={styles.transcriptTitle}>
+                  Transcript
+                </Text>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+
+                  {(loading || liveUpdating) && (
+                    <ActivityIndicator
+                      size="small"
+                      color="#0F766E"
+                      style={{ marginRight: 12 }}
+                    />
+                  )}
+
+                  <TouchableOpacity
+                    onPress={clearTranscript}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={22}
+                      color="#DC2626"
+                    />
+                  </TouchableOpacity>
+
+                </View>
+
+              </View>
+
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+
+                {transcript ? (
+                  <Markdown style={markdownStyles}>
+                    {transcript}
+                  </Markdown>
+                ) : (
+                  <Text style={styles.emptyText}>
+                    Start recording or import an audio file.
+                  </Text>
+                )}
+
+              </ScrollView>
+
+            </View>
+
+            <View style={styles.bottomBar}>
+
+              <TouchableOpacity
+                style={styles.iconButton}
                 onPress={pickAudioFile}
-                disabled={loading || isRecording}>
-                <Ionicons name="document-outline" color="#334155" size={22} />
+                disabled={loading || isRecording}
+              >
+                <Ionicons
+                  name="document-outline"
+                  size={24}
+                  color="#334155"
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
                   styles.recordButton,
                   isRecording && styles.stopButton,
-                  loading && !isRecording && styles.disabledButton,
                 ]}
-                activeOpacity={0.9}
-                disabled={loading && !isRecording}
-                onPress={toggleRecording}>
+                onPress={toggleRecording}
+              >
+
                 <Ionicons
                   name={isRecording ? "stop" : "mic"}
                   size={24}
@@ -1057,8 +1081,11 @@ export default function LLMWisperAudioOffline() {
                 <Text style={styles.recordText}>
                   {isRecording ? "Stop Recording" : "Start Recording"}
                 </Text>
+
               </TouchableOpacity>
+
             </View>
+
           </View>
         )}
       </KeyboardAvoidingView>
@@ -1066,527 +1093,4 @@ export default function LLMWisperAudioOffline() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
 
-  // header: {
-  //   height: 60,
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  //   backgroundColor: '#2E7D32',
-  // },
-
-  // headerText: {
-  //   color: '#fff',
-  //   fontWeight: 'bold',
-  //   fontSize: 20,
-  // },
-
-  bubble: {
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 10,
-    maxWidth: '85%',
-  },
-
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#81C784',
-  },
-
-  botBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff',
-  },
-
-  title: {
-    fontWeight: 'bold',
-    marginBottom: 6,
-    color: '#222',
-  },
-
-  loading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-  },
-
-  inputBar: {
-    flexDirection: 'row',
-    padding: 10,
-    backgroundColor: '#fff',
-  },
-
-  input2: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    maxHeight: 120,
-    color: '#222',
-  },
-
-  send: {
-    backgroundColor: '#2E7D32',
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-    borderRadius: 10,
-    marginLeft: 10,
-  },
-  thinkingContainer: {
-    paddingHorizontal: 5,
-    paddingBottom: 5,
-    justifyContent: 'center',
-  },
-
-  thinkingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 4,
-  },
-
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-
-  avatarText: {
-    fontSize: 24,
-  },
-
-  thinkingTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#222',
-  },
-
-  thinkingSubtitle: {
-    color: '#777',
-    marginTop: 3,
-    fontSize: 13,
-  },
-
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    // marginTop: 12,
-  },
-
-  progressText: {
-    marginLeft: 10,
-    color: '#2E7D32',
-    fontWeight: '600',
-  },
-  downloadContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-
-  downloadCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 5,
-  },
-
-  downloadIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#E8F5E9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  downloadTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#222',
-    marginBottom: 10,
-  },
-
-  downloadDescription: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 25,
-  },
-
-  downloadButton: {
-    backgroundColor: '#2E7D32',
-    borderRadius: 12,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-  },
-
-  downloadButtonText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-
-  progressContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-
-  progressPercent: {
-    marginTop: 20,
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#2E7D32',
-  },
-
-  progressSize: {
-    marginTop: 8,
-    fontSize: 15,
-    color: '#666',
-  },
-
-  progressBar: {
-    width: '100%',
-    height: 10,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 10,
-    marginTop: 25,
-    overflow: 'hidden',
-  },
-
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#2E7D32',
-    borderRadius: 10,
-  },
-
-  header: {
-    backgroundColor: '#2E7D32',
-    padding: 16,
-  },
-
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  headerText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-    marginLeft: 10,
-  },
-
-  modelCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-  },
-
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-  },
-
-  input: {
-    flex: 1,
-    paddingVertical: 10,
-    marginLeft: 10,
-    color: '#222',
-  },
-
-  actionButton: {
-    height: 48,
-    backgroundColor: '#2E7D32',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    marginTop: 10,
-  },
-
-  actionText: {
-    color: '#fff',
-    fontWeight: '700',
-    marginLeft: 8,
-  },
-  systemContainer: {
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-
-  systemBubble: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    maxWidth: '90%',
-  },
-
-  systemText: {
-    color: '#2E7D32',
-    fontWeight: '600',
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  progressTrack: {
-    width: '100%',
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginTop: 20,
-  },
-
-  progressIndicator: {
-    width: '35%',
-    height: '100%',
-    backgroundColor: '#2E7D32',
-    borderRadius: 10,
-  },
-  whisperContainer: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-
-  whisperContent: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-
-  statusIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#CCFBF1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-
-  statusCopy: {
-    flex: 1,
-  },
-
-  statusTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-
-  statusSubtitle: {
-    marginTop: 4,
-    color: '#64748B',
-    fontSize: 13,
-  },
-
-  modePanel: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-
-  modeGroup: {
-    marginBottom: 12,
-  },
-
-  modeLabel: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-
-  segmentedControl: {
-    height: 42,
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    padding: 4,
-  },
-
-  segmentButton: {
-    flex: 1,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  segmentButtonActive: {
-    backgroundColor: '#0F766E',
-  },
-
-  segmentText: {
-    color: '#475569',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-
-  segmentTextActive: {
-    color: '#FFFFFF',
-  },
-
-  recordButton: {
-    flex: 1,
-    height: 54,
-    borderRadius: 8,
-    backgroundColor: '#0F766E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-
-  stopButton: {
-    backgroundColor: '#DC2626',
-  },
-
-  disabledButton: {
-    backgroundColor: '#94A3B8',
-  },
-
-  recordText: {
-    color: '#fff',
-    marginLeft: 10,
-    fontWeight: '700',
-    fontSize: 16,
-  },
-
-  fileButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    marginRight: 12,
-  },
-
-  disabledSecondaryButton: {
-    opacity: 0.5,
-  },
-
-  resultCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-
-  resultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  resultTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-
-  inlineLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDFA',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-
-  inlineLoadingText: {
-    marginLeft: 6,
-    color: '#0F766E',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  transcriptScroll: {
-    flex: 1,
-  },
-
-  transcriptContent: {
-    flexGrow: 1,
-  },
-
-  transcript: {
-    fontSize: 16,
-    lineHeight: 26,
-    color: '#1E293B',
-  },
-
-  transcriptPlaceholder: {
-    color: '#94A3B8',
-  },
-
-  bottomControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-});
