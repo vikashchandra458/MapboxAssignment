@@ -32,7 +32,7 @@ const Dashboard = () => {
     {name: 'Screen Protection', screen: 'ScreenProtection'},
     {name: 'Draggable card', screen: 'DraggableCard'},
     {name: 'Floating Button', screen: 'DraggableFloatingButton'},
-    {name: 'PipModuleUI', screen: 'PipModuleUI'},
+    {name: 'PIP Mode', screen: 'PipModuleUI'},
   ];
 
   // Log button data for debugging

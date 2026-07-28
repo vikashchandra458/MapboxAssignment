@@ -14,7 +14,7 @@ import BluetoothNFCReader from './src/Screens/Bluetooth/BluetoothNFCReader';
 import ScreenProtection from './src/Screens/ScreenProtection/ScreenProtection';
 import DraggableCard from './src/Screens/DraggableCard/DraggableCard';
 import DraggableFloatingButton from './src/Screens/DraggableCard/DraggableFloatingButton';
-import PipModuleUI from './src/Screens/PipModule/PipModule';
+import PipModuleUI from './src/Screens/PipModule/PipModuleUI';
 const Stack = createNativeStackNavigator();
 
 export default function App() {

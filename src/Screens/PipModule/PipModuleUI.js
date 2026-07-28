@@ -44,29 +44,6 @@ export default function PipModuleUI() {
         return () => subscription.remove();
     }, []);
 
-    useEffect(() => {
-        const subscription = AppState.addEventListener(
-            'change',
-            nextAppState => {
-                // App moved to background
-                if (
-                    appState.current === 'active' &&
-                    (nextAppState === 'background' || nextAppState === 'inactive')
-                ) {
-                    // Only enter PiP if video is playing
-                    if (!paused) {
-                        PipModule.enterPip();
-                    }
-                }
-
-                appState.current = nextAppState;
-            },
-        );
-
-        return () => {
-            subscription.remove();
-        };
-    }, [paused]);
 
     const loadVideo = async () => {
         try {
@@ -130,9 +107,11 @@ export default function PipModuleUI() {
                         ignoreSilentSwitch="ignore"
                         onPlaybackStateChanged={({ isPlaying }) => {
                             setPaused(!isPlaying);
+                            PipModule.setVideoPlaying(isPlaying);
                         }}
                         onEnd={() => {
                             setPaused(true);
+                            PipModule.setVideoPlaying(false);
                         }}
                     />
                 )}
