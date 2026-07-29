@@ -16,6 +16,7 @@ import DraggableCard from './src/Screens/DraggableCard/DraggableCard';
 import DraggableFloatingButton from './src/Screens/DraggableCard/DraggableFloatingButton';
 import PipModuleUI from './src/Screens/PipModule/PipModuleUI';
 import LLMWisperAudioOffline from './src/Screens/LLM/LLMWisperAudioOffline';
+import AnimatedLessons from './src/Screens/ReactNativeReanimated/AnimatedLessons';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -86,6 +87,10 @@ export default function App() {
             <Stack.Screen
               name='LLMWisperAudioOffline'
               component={LLMWisperAudioOffline}
+            />
+             <Stack.Screen
+              name='AnimatedLessons'
+              component={AnimatedLessons}
             />
           </Stack.Navigator>
         </NavigationContainer>

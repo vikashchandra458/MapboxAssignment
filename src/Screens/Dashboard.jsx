@@ -34,6 +34,7 @@ const Dashboard = () => {
     {name: 'Floating Button', screen: 'DraggableFloatingButton'},
     {name: 'PIP Mode', screen: 'PipModuleUI'},
     {name: 'Speech to Text', screen: 'LLMWisperAudioOffline'},
+    {name: 'Animated Lessons', screen: 'AnimatedLessons'},
   ];
 
   // Log button data for debugging
