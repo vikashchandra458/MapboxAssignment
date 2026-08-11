@@ -40,13 +40,13 @@ export const styles = StyleSheet.create({
 
     list: {
         paddingHorizontal: 15,
-        paddingTop: 25,
-        paddingBottom: 15,
+        paddingTop: 10,
+        paddingBottom: 5,
     },
 
     lessonButton: {
         width: 115,
-        height: 95,
+        height: 75,
         marginRight: 14,
         borderRadius: 22,
 
@@ -80,7 +80,6 @@ export const styles = StyleSheet.create({
 
     icon: {
         fontSize: 30,
-        marginBottom: 8,
     },
 
     lessonText: {
@@ -173,9 +172,9 @@ export const styles = StyleSheet.create({
     =========================== */
 
     lessonContainer: {
-        marginTop: 25,
-        paddingHorizontal: 20,
-        paddingBottom: 40,
+        // marginTop: 25,
+        // paddingHorizontal: 20,
+        // paddingBottom: 40,
     },
 
     componentCard: {
@@ -328,5 +327,153 @@ export const styles = StyleSheet.create({
         marginTop: 5,
         color: "#6B7280",
         fontSize: 14,
+    },
+    l1Container: {
+        flex: 1,
+        backgroundColor: "#F5F7FA",
+        alignItems: "center",
+        // paddingTop: 12,
+    },
+
+    l1Box: {
+        width: 130,
+        height: 130,
+        borderRadius: 14,
+        backgroundColor: "#4CAF50",
+        marginBottom: 12,
+
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+    },
+
+    l1Card: {
+        width: "96%",
+        backgroundColor: "#FFF",
+        borderRadius: 12,
+        padding: 10,
+        marginBottom: 10,
+
+        elevation: 3,
+        shadowColor: "#000",
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+    },
+
+    l1Row: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+
+    l1InputContainer: {
+        width: "48%",
+    },
+
+    l1InputLabel: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: "#666",
+        marginBottom: 4,
+    },
+
+    l1Input: {
+        height: 36,
+        borderWidth: 1,
+        borderColor: "#DDD",
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        fontSize: 14,
+        color: "#222",
+        backgroundColor: "#FAFAFA",
+    },
+
+    l1ModeContainer: {
+        flexDirection: "row",
+        marginTop: 10,
+    },
+
+    l1ModeButton: {
+        flex: 1,
+        height: 38,
+        marginHorizontal: 4,
+        borderRadius: 10,
+
+        backgroundColor: "#ECEFF1",
+
+        borderWidth: 1,
+        borderColor: "#CFD8DC",
+
+        justifyContent: "center",
+        alignItems: "center",
+    },
+
+    l1ModeButtonActive: {
+        backgroundColor: "#2E7D32",
+        borderColor: "#2E7D32",
+    },
+
+
+    l1StopButton: {
+        backgroundColor: "#D32F2F",
+        borderColor: "#D32F2F",
+    },
+
+    l1ModeText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#37474F",
+    },
+
+    l1ButtonList: {
+        paddingTop: 10,
+        paddingHorizontal: 2,
+        paddingBottom: 4,
+    },
+
+    l1Chip: {
+        paddingHorizontal: 12,
+        height: 25,
+        borderRadius: 17,
+        marginRight: 8,
+
+        justifyContent: "center",
+        alignItems: "center",
+
+        backgroundColor: "#FFF",
+        borderWidth: 1,
+        borderColor: "#DDD",
+
+        elevation: 1,
+    },
+
+    l1ChipSelected: {
+        backgroundColor: "#1976D2",
+        borderColor: "#1976D2",
+    },
+
+    l1ChipText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#444",
+    },
+
+    l1ChipTextSelected: {
+        color: "#FFF",
+    },
+    l1Title: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#37474F",
+        // marginTop: 12,
+        // marginBottom: 4,
     },
 });
