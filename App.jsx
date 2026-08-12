@@ -17,6 +17,7 @@ import DraggableFloatingButton from './src/Screens/DraggableCard/DraggableFloati
 import PipModuleUI from './src/Screens/PipModule/PipModuleUI';
 import LLMWisperAudioOffline from './src/Screens/LLM/LLMWisperAudioOffline';
 import AnimatedLessons from './src/Screens/ReactNativeReanimated/AnimatedLessons';
+import LoaderAnimation from './src/Screens/ReactNativeReanimated/LoaderAnimation';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -91,6 +92,10 @@ export default function App() {
              <Stack.Screen
               name='AnimatedLessons'
               component={AnimatedLessons}
+            />
+             <Stack.Screen
+              name='LoaderAnimation'
+              component={LoaderAnimation}
             />
           </Stack.Navigator>
         </NavigationContainer>

@@ -35,6 +35,7 @@ const Dashboard = () => {
     {name: 'PIP Mode', screen: 'PipModuleUI'},
     {name: 'Speech to Text', screen: 'LLMWisperAudioOffline'},
     {name: 'Animated Lessons', screen: 'AnimatedLessons'},
+    {name: 'Loader Animation', screen: 'LoaderAnimation'},
   ];
 
   // Log button data for debugging
