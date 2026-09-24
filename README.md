@@ -1,4 +1,4 @@
-# MapboxAssignment
+# PersonalAssignment
 
 This React Native app allows users to draw polygons on a Mapbox map, save them, and display clustered markers representing the polygons' first points. The app utilizes Mapbox's mapping services to display the map and handle polygon drawing while also clustering the markers for improved performance and user experience.
 

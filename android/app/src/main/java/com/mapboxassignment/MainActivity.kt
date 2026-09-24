@@ -1,4 +1,4 @@
-package com.mapboxassignment
+package com.personalassignment
 
 import android.content.res.Configuration
 import android.os.Bundle
@@ -13,7 +13,7 @@ class MainActivity : ReactActivity() {
         super.onCreate(null)
     }
 
-    override fun getMainComponentName() = "MapboxAssignment"
+    override fun getMainComponentName() = "PersonalAssignment"
 
     override fun createReactActivityDelegate() =
         DefaultReactActivityDelegate(
